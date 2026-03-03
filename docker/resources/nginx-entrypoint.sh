@@ -21,11 +21,11 @@ if [[ -z "$UPSTREAM_REAL_IP_RECURSIVE" ]]; then
   echo "UPSTREAM_REAL_IP_RECURSIVE defaulting to off"
   export UPSTREAM_REAL_IP_RECURSIVE=off
 fi
-if [[ -z "$FRAPPE_SITE_NAME_HEADER" ]]; then
+if [[ -z "$SITE_NAME_HEADER" ]]; then
   # shellcheck disable=SC2016
-  echo 'FRAPPE_SITE_NAME_HEADER defaulting to $host'
+  echo 'SITE_NAME_HEADER defaulting to $host'
   # shellcheck disable=SC2016
-  export FRAPPE_SITE_NAME_HEADER='$host'
+  export SITE_NAME_HEADER='$host'
 fi
 
 if [[ -z "$PROXY_READ_TIMEOUT" ]]; then
@@ -44,7 +44,7 @@ envsubst '${BACKEND}
   ${UPSTREAM_REAL_IP_ADDRESS}
   ${UPSTREAM_REAL_IP_HEADER}
   ${UPSTREAM_REAL_IP_RECURSIVE}
-  ${FRAPPE_SITE_NAME_HEADER}
+  ${SITE_NAME_HEADER}
   ${PROXY_READ_TIMEOUT}
 	${CLIENT_MAX_BODY_SIZE}' \
   </templates/nginx/frappe.conf.template >/etc/nginx/conf.d/frappe.conf
