@@ -22,20 +22,15 @@ USER cogniquaint
 RUN --mount=type=secret,id=GH_PAT2 \
     mkdir -p /opt/frappe/apps && \
     if [ -f /opt/frappe/apps.json ]; then \
-      if [ -s /run/secrets/GH_PAT2 ]; then \
-        TOKEN=$(cat /run/secrets/GH_PAT2) && \
-        git config --global url."https://${TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"; \
+      SECRET_TOKEN=$(cat /run/secrets/GH_PAT 2>/dev/null || true) && \
+      if [ -n "$SECRET_TOKEN" ]; then \
+        echo "Secret file found, token loaded: ${SECRET_TOKEN:0:10}..." && \
+        git config --global url."https://${SECRET_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/" && \
+        echo "Git config updated successfully"; \
+      else \
+        echo "Warning: Secret file GH_PAT2 not found or empty"; \
       fi && \
       jq -c ".[]" /opt/frappe/apps.json | while read -r line; do \
-        if [ -s /run/secrets/GH_PAT2 ]; then \
-          echo "Secret file found at /run/secrets/GH_PAT2" && \
-          TOKEN=$(cat /run/secrets/GH_PAT2) && \
-          echo "Token loaded: ${TOKEN:0:10}..." && \
-          git config --global url."https://${TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/" && \
-          echo "Git config updated successfully"; \
-        else \
-          echo "Warning: Secret file GH_PAT2 not found or empty"; \
-        fi && \
         url=$(echo "$line" | jq -r ".url") && \
         branch=$(echo "$line" | jq -r ".branch") && \
         repo_name=$(basename "$url" .git) && \
