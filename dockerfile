@@ -19,7 +19,7 @@ RUN useradd -ms /bin/bash cogniquaint && chown -R cogniquaint:cogniquaint /opt/f
 
 USER cogniquaint
 
-RUN --mount=type=secret,id=GH_PAT2 \
+RUN --mount=type=secret,id=GH_PAT \
     mkdir -p /opt/frappe/apps && \
     if [ -f /opt/frappe/apps.json ]; then \
       SECRET_TOKEN=$(cat /run/secrets/GH_PAT 2>/dev/null || true) && \
