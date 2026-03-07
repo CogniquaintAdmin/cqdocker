@@ -23,7 +23,10 @@ RUN --mount=type=secret,id=git_token \
     bash -c '\
       if [ -s /run/secrets/git_token ]; then \
         export GIT_TOKEN=$(cat /run/secrets/git_token) && \
-        git config --global url."https://${GIT_TOKEN}@github.com/".insteadOf "https://github.com/"; \
+        git config --global --add url."https://$GIT_TOKEN@github.com/".insteadOf "https://github.com/" && \
+        git config --global credential.helper store && \
+        echo "https://$GIT_TOKEN@github.com" > ~/.git-credentials && \
+        chmod 600 ~/.git-credentials; \
       fi && \
       mkdir -p /opt/frappe/apps && \
       if [ -f /opt/frappe/apps.json ]; then \
@@ -35,3 +38,4 @@ RUN --mount=type=secret,id=git_token \
         done; \
       fi \
     '
+
