@@ -26,10 +26,10 @@ RUN --mount=type=secret,id=git_token \
     fi && \
     mkdir -p /opt/frappe/apps && \
     if [ -f /opt/frappe/apps.json ]; then \
-      while IFS= read -r line; do \
+      jq -c '.[]' /opt/frappe/apps.json | while read -r line; do \
         url=$(echo "$line" | jq -r '.url') && \
         branch=$(echo "$line" | jq -r '.branch') && \
         repo_name=$(basename "$url" .git) && \
         git clone --branch "$branch" "$url" "/opt/frappe/apps/$repo_name" || echo "Failed to clone $url"; \
-      done < <(jq -c '.[]' /opt/frappe/apps.json); \
+      done; \
     fi
