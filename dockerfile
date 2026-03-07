@@ -19,15 +19,12 @@ RUN useradd -ms /bin/bash cogniquaint && chown -R cogniquaint:cogniquaint /opt/f
 
 USER cogniquaint
 
-RUN --mount=type=secret,id=GH_PAT \
+RUN --mount=type=secret,id=GH_PAT2 \
     mkdir -p /opt/frappe/apps && \
-    if [ -f /opt/frappe/apps.json ]; then \
-      if [ -s /run/secrets/GH_PAT ]; then \
-        TOKEN=$(cat /run/secrets/GH_PAT) && \
-        git config --global url."https://${TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"; \
-      fi && \
+    if [ -f /opt/frappe/apps.json ] && [ -s /run/secrets/GH_PAT2 ]; then \
+      TOKEN=$(cat /run/secrets/GH_PAT2) && \
       jq -c ".[]" /opt/frappe/apps.json | while read -r line; do \
-        git config --global url."https://$(cat /run/secrets/GH_PAT):x-oauth-basic@github.com/".insteadOf "https://github.com/" 2>/dev/null || true && \
+        git config --global url."https://${TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/" && \
         url=$(echo "$line" | jq -r ".url") && \
         branch=$(echo "$line" | jq -r ".branch") && \
         repo_name=$(basename "$url" .git) && \
