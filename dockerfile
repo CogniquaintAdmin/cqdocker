@@ -6,15 +6,16 @@ ARG WKHTMLTOPDF_VERSION=0.12.6.1-3
 ARG WKHTMLTOPDF_DISTRO=bookworm
 FROM base AS builder
 
-RUN apt-get update && apt-get install -y git curl
+RUN apt-get update && apt-get install -y git curl jq
 
 # apps.json includes
 ARG APPS_JSON_BASE64
 RUN if [ -n "${APPS_JSON_BASE64}" ]; then \
-    mkdir /opt/frappe && echo "${APPS_JSON_BASE64}" | base64 -d > /opt/frappe/apps.json; \
+    mkdir -p /opt/frappe && echo "${APPS_JSON_BASE64}" | base64 -d > /opt/frappe/apps.json && \
+    chown -R root:root /opt/frappe; \
   fi
 
-RUN useradd -ms /bin/bash cogniquaint
+RUN useradd -ms /bin/bash cogniquaint && chown -R cogniquaint:cogniquaint /opt/frappe 2>/dev/null || true
 
 USER cogniquaint
 
@@ -25,8 +26,10 @@ RUN --mount=type=secret,id=git_token \
     fi && \
     mkdir -p /opt/frappe/apps && \
     if [ -f /opt/frappe/apps.json ]; then \
-      jq -r '.[] | "\(.url) \(.branch)"' /opt/frappe/apps.json | while read url branch; do \
+      while IFS= read -r line; do \
+        url=$(echo "$line" | jq -r '.url') && \
+        branch=$(echo "$line" | jq -r '.branch') && \
         repo_name=$(basename "$url" .git) && \
         git clone --branch "$branch" "$url" "/opt/frappe/apps/$repo_name" || echo "Failed to clone $url"; \
-      done; \
+      done < <(jq -c '.[]' /opt/frappe/apps.json); \
     fi
