@@ -19,14 +19,11 @@ RUN useradd -ms /bin/bash cogniquaint && chown -R cogniquaint:cogniquaint /opt/f
 
 USER cogniquaint
 
-RUN --mount=type=secret,id=git_token \
+RUN --mount=type=secret,id=GH_PAT \
     bash -c '\
-      if [ -s /run/secrets/git_token ]; then \
-        export GIT_TOKEN=$(cat /run/secrets/git_token) && \
-        git config --global --add url."https://$GIT_TOKEN@github.com/".insteadOf "https://github.com/" && \
-        git config --global credential.helper store && \
-        echo "https://$GIT_TOKEN@github.com" > ~/.git-credentials && \
-        chmod 600 ~/.git-credentials; \
+      if [ -s /run/secrets/GH_PAT ]; then \
+        export GIT_TOKEN=$(cat /run/secrets/GH_PAT) && \
+        git config --global --add url."https://$GIT_TOKEN@github.com/".insteadOf "https://github.com/"; \
       fi && \
       mkdir -p /opt/frappe/apps && \
       if [ -f /opt/frappe/apps.json ]; then \
