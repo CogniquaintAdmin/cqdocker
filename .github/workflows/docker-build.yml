@@ -1,4 +1,4 @@
-name: Build and Push ERP Image
+name: Build and Push ERP Image V16
 
 on:
   push:
@@ -11,9 +11,9 @@ jobs:
 
     env:
       GIT_REPO_PATH: https://github.com/frappe/frappe
-      GIT_BRANCH: version-15
-      PYTHON_VERSION: "3.11.9"
-      NODE_VERSION: "18.20.2"
+      GIT_BRANCH: version-16
+      PYTHON_VERSION: "3.14.3"
+      NODE_VERSION: "24.14.0"
 
     steps:
       - name: Checkout code
@@ -56,7 +56,7 @@ jobs:
             PYTHON_VERSION=${{ env.PYTHON_VERSION }}
             NODE_VERSION=${{ env.NODE_VERSION }}
             APPS_JSON_BASE64=${{ env.APPS_JSON_BASE64 }}
+            GIT_TOKEN=${{ secrets.GITHUB_TOKEN }}
           tags: |
-            cogniquaint/erp:${{ steps.vars.outputs.VERSION }}
-            cogniquaint/erp:${{ github.sha }}
-            cogniquaint/erp:latest
+            cogniquaint/erp16:${{ steps.vars.outputs.VERSION }}
+            cogniquaint/erp16:latest

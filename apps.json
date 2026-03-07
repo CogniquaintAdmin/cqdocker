@@ -1,7 +1,7 @@
 [
   {
     "url": "https://github.com/frappe/erpnext",
-    "branch": "version-15"
+    "branch": "version-16"
   },
   {
     "url": "https://github.com/frappe/payments",
@@ -9,14 +9,18 @@
   },
   {
     "url": "https://github.com/frappe/hrms",
-    "branch": "version-15"
+    "branch": "version-16"
   },
   {
     "url": "https://github.com/resilient-tech/india-compliance",
-    "branch": "version-15"
+    "branch": "version-16"
   },
   {
     "url": "https://github.com/CogniquaintAdmin/cqmsapp",
     "branch": "develop"
+  },
+  {
+    "url": "https://github.com/CogniquaintAdmin/cqbranding",
+    "branch": "version-16"
   }
 ]
