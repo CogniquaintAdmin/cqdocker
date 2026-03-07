@@ -19,10 +19,11 @@ RUN useradd -ms /bin/bash cogniquaint && chown -R cogniquaint:cogniquaint /opt/f
 
 USER cogniquaint
 
-RUN --mount=type=secret,id=GH_PAT,dst=/root/.netrc \
-    git config --global url."https://github.com/".insteadOf "https://github.com/" && \
-    sh -c 'echo "machine github.com login x-oauth-basic password $(cat /root/.netrc)" > /root/.netrc' && \
-    chmod 600 /root/.netrc && \
+RUN --mount=type=secret,id=GH_PAT \
+    if [ -s /run/secrets/GH_PAT ]; then \
+      TOKEN=$(cat /run/secrets/GH_PAT) && \
+      git config --global url."https://${TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"; \
+    fi && \
     mkdir -p /opt/frappe/apps && \
     if [ -f /opt/frappe/apps.json ]; then \
       jq -c ".[]" /opt/frappe/apps.json | while read -r line; do \
