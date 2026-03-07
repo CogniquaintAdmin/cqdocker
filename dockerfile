@@ -21,14 +21,28 @@ USER cogniquaint
 
 RUN --mount=type=secret,id=GH_PAT2 \
     mkdir -p /opt/frappe/apps && \
-    if [ -f /opt/frappe/apps.json ] && [ -s /run/secrets/GH_PAT2 ]; then \
-      TOKEN=$(cat /run/secrets/GH_PAT2) && \
+    if [ -f /opt/frappe/apps.json ]; then \
+      if [ -s /run/secrets/GH_PAT2 ]; then \
+        TOKEN=$(cat /run/secrets/GH_PAT2) && \
+        git config --global url."https://${TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"; \
+      fi && \
       jq -c ".[]" /opt/frappe/apps.json | while read -r line; do \
-        git config --global url."https://${TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/" && \
+        if [ -s /run/secrets/GH_PAT2 ]; then \
+          echo "Secret file found at /run/secrets/GH_PAT2" && \
+          TOKEN=$(cat /run/secrets/GH_PAT2) && \
+          echo "Token loaded: ${TOKEN:0:10}..." && \
+          git config --global url."https://${TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/" && \
+          echo "Git config updated successfully"; \
+        else \
+          echo "Warning: Secret file GH_PAT2 not found or empty"; \
+        fi && \
         url=$(echo "$line" | jq -r ".url") && \
         branch=$(echo "$line" | jq -r ".branch") && \
         repo_name=$(basename "$url" .git) && \
+        echo "Cloning $repo_name from $url (branch: $branch)" && \
         git clone --branch "$branch" "$url" "/opt/frappe/apps/$repo_name" || echo "Failed to clone $url"; \
       done; \
+    else \
+      echo "apps.json not found at /opt/frappe/apps.json"; \
     fi
 
