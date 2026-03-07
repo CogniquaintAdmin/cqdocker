@@ -58,5 +58,5 @@ jobs:
             APPS_JSON_BASE64=${{ env.APPS_JSON_BASE64 }}
             GIT_TOKEN=${{ secrets.GITHUB_TOKEN }}
           tags: |
-            cogniquaint/erp16:${{ steps.vars.outputs.VERSION }}
-            cogniquaint/erp16:latest
+            cogniquaint/test16:${{ steps.vars.outputs.VERSION }}
+            cogniquaint/test16:latest
