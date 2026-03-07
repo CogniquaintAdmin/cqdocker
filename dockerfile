@@ -20,19 +20,17 @@ RUN useradd -ms /bin/bash cogniquaint && chown -R cogniquaint:cogniquaint /opt/f
 USER cogniquaint
 
 RUN --mount=type=secret,id=GH_PAT \
-    bash -c '\
-      if [ -s /run/secrets/GH_PAT ]; then \
-        export GIT_TOKEN=$(cat /run/secrets/GH_PAT) && \
-        git config --global --add url."https://$GIT_TOKEN@github.com/".insteadOf "https://github.com/"; \
-      fi && \
-      mkdir -p /opt/frappe/apps && \
-      if [ -f /opt/frappe/apps.json ]; then \
-        jq -c ".[]" /opt/frappe/apps.json | while read -r line; do \
-          url=$(echo "$line" | jq -r ".url") && \
-          branch=$(echo "$line" | jq -r ".branch") && \
-          repo_name=$(basename "$url" .git) && \
-          git clone --branch "$branch" "$url" "/opt/frappe/apps/$repo_name" || echo "Failed to clone $url"; \
-        done; \
-      fi \
-    '
+    if [ -s /run/secrets/GH_PAT ]; then \
+      export TOKEN=$(cat /run/secrets/GH_PAT) && \
+      git config --global url."https://${TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/"; \
+    fi && \
+    mkdir -p /opt/frappe/apps && \
+    if [ -f /opt/frappe/apps.json ]; then \
+      jq -c ".[]" /opt/frappe/apps.json | while read -r line; do \
+        url=$(echo "$line" | jq -r ".url") && \
+        branch=$(echo "$line" | jq -r ".branch") && \
+        repo_name=$(basename "$url" .git) && \
+        git clone --branch "$branch" "$url" "/opt/frappe/apps/$repo_name" || echo "Failed to clone $url"; \
+      done; \
+    fi
 
