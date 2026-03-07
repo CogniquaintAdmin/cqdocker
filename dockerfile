@@ -14,6 +14,8 @@ RUN if [ -n "${APPS_JSON_BASE64}" ]; then \
     mkdir /opt/frappe && echo "${APPS_JSON_BASE64}" | base64 -d > /opt/frappe/apps.json; \
   fi
 
+RUN useradd -ms /bin/bash cogniquaint
+
 USER cogniquaint
 
 RUN --mount=type=secret,id=git_token \
