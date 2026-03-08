@@ -25,23 +25,23 @@ RUN --mount=type=secret,id=GH_PAT,uid=1000,gid=1000 \
     if [ -f /opt/frappe/apps.json ]; then \
       if [ -f /run/secrets/GH_PAT ]; then \
         SECRET_TOKEN=$(cat /run/secrets/GH_PAT) && \
-        git config --global url."https://${SECRET_TOKEN}:x-oauth-basic@://github.com".insteadOf "https://://github.com" && \
-        echo "Git configuration set with token."; \
+        # Configure git to use the token for ALL github.com requests
+        git config --global url."https://${SECRET_TOKEN}@://github.com".insteadOf "https://://github.com"; \
       else \
-        echo "Error: Secret GH_PAT not found at /run/secrets/GH_PAT"; exit 1; \
+        echo "Error: Secret GH_PAT not found"; exit 1; \
       fi && \
       jq -c ".[]" /opt/frappe/apps.json | while read -r line; do \
         url=$(echo "$line" | jq -r ".url") && \
         branch=$(echo "$line" | jq -r ".branch") && \
         repo_name=$(basename "$url" .git) && \
-        echo "Cloning $repo_name..." && \
-        git clone --depth 1 --branch "$branch" "$url" "/opt/frappe/apps/$repo_name"; \
+        echo "Cloning $repo_name from $url..." && \
+        # Explicitly disable terminal prompts to prevent hanging
+        GIT_TERMINAL_PROMPT=0 git clone --depth 1 --branch "$branch" "$url" "/opt/frappe/apps/$repo_name" || exit 1; \
       done; \
-      # Cleanup git config to ensure no tokens remain in this layer
-      git config --global --unset url."https://${SECRET_TOKEN}:x-oauth-basic@://github.com".insteadOf; \
-    else \
-      echo "apps.json not found, skipping clone."; \
+      # Cleanup token from config
+      git config --global --unset url."https://${SECRET_TOKEN}@://github.com".insteadOf; \
     fi
+
 
 # Stage 2: Final Image
 FROM python:${PYTHON_VERSION}-slim-${DEBIAN_BASE} AS final
