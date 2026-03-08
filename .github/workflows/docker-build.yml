@@ -16,7 +16,7 @@ jobs:
     env:
       GIT_REPO_PATH: https://github.com/frappe/frappe
       GIT_BRANCH: version-16
-      PYTHON_VERSION: "3.11.6"
+      PYTHON_VERSION: "3.14.3"
       NODE_VERSION: "24.14.0"
 
     steps:
