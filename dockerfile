@@ -115,10 +115,9 @@ RUN if [ -n "${APPS_JSON_BASE64}" ]; then \
   fi
 
 USER cogniquaint
-WORKDIR /home/cogniquaint
 
-ARG GIT_BRANCH=version-16
-ARG GIT_REPO_PATH=https://github.com
+ARG GIT_BRANCH=version-15
+ARG GIT_REPO_PATH=https://github.com/frappe/frappe
 
 # Securely Mount PAT and Init Bench using Credential Store
 RUN --mount=type=secret,id=GH_PAT,uid=1000 \
@@ -129,16 +128,17 @@ RUN --mount=type=secret,id=GH_PAT,uid=1000 \
         echo "Git credentials configured."; \
     fi && \
     export APP_INSTALL_ARGS="" && \
-    if [ -f "/opt/frappe/apps.json" ]; then \
+    if [ -n "${APPS_JSON_BASE64}" ]; then \
       export APP_INSTALL_ARGS="--apps_path=/opt/frappe/apps.json"; \
     fi && \
-    # Initialize Bench
-    bench init ${APP_INSTALL_ARGS} \
+    bench init ${APP_INSTALL_ARGS}\
       --frappe-branch=${GIT_BRANCH} \
       --frappe-path=${GIT_REPO_PATH} \
-      --no-procfile --no-backups --skip-redis-config-generation --verbose \
+      --no-procfile \
+      --no-backups \
+      --skip-redis-config-generation \
+      --verbose \
       /home/cogniquaint/cqbench && \
-    # Post-init Cleanup
     cd /home/cogniquaint/cqbench && \
     echo "{}" > sites/common_site_config.json && \
     find apps -mindepth 1 -path "*/.git" | xargs rm -fr && \
