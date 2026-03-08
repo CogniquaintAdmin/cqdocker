@@ -25,8 +25,10 @@ RUN --mount=type=secret,id=GH_PAT,uid=1000,gid=1000 \
     if [ -f /opt/frappe/apps.json ]; then \
       if [ -f /run/secrets/GH_PAT ]; then \
         SECRET_TOKEN=$(cat /run/secrets/GH_PAT) && \
-        # Configure git to use the token for ALL github.com requests
-        git config --global url."https://${SECRET_TOKEN}@://github.com".insteadOf "https://://github.com"; \
+        # Force git to use the token as the password for any github.com request
+        git config --global credential.helper 'store' && \
+        echo "https://x-access-token:${SECRET_TOKEN}@github.com" > ~/.git-credentials && \
+        echo "Git credentials configured."; \
       else \
         echo "Error: Secret GH_PAT not found"; exit 1; \
       fi && \
@@ -35,12 +37,13 @@ RUN --mount=type=secret,id=GH_PAT,uid=1000,gid=1000 \
         branch=$(echo "$line" | jq -r ".branch") && \
         repo_name=$(basename "$url" .git) && \
         echo "Cloning $repo_name from $url..." && \
-        # Explicitly disable terminal prompts to prevent hanging
-        GIT_TERMINAL_PROMPT=0 git clone --depth 1 --branch "$branch" "$url" "/opt/frappe/apps/$repo_name" || exit 1; \
+        # GIT_TERMINAL_PROMPT=0 ensures it fails instead of hanging if token is wrong
+        GIT_TERMINAL_PROMPT=0 git clone --depth 1 --branch "$branch" "$url" "/opt/frappe/apps/$repo_name" || { echo "Failed to clone $repo_name"; exit 1; }; \
       done; \
-      # Cleanup token from config
-      git config --global --unset url."https://${SECRET_TOKEN}@://github.com".insteadOf; \
+      # Cleanup sensitive data
+      rm ~/.git-credentials && git config --global --unset credential.helper; \
     fi
+
 
 
 # Stage 2: Final Image
