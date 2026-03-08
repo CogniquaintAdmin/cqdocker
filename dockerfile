@@ -15,44 +15,96 @@ COPY docker/resources/nginx-entrypoint.sh /usr/local/bin/nginx-entrypoint.sh
 RUN useradd -ms /bin/bash -u 1000 cogniquaint \
     && apt-get update \
     && apt-get install --no-install-recommends -y \
-    curl git vim nginx gettext-base file libpango-1.0-0 libharfbuzz0b \
-    libpangoft2-1.0-0 libpangocairo-1.0-0 restic gpg mariadb-client \
-    less libpq-dev postgresql-client wait-for-it jq \
+    curl \
+    git \
+    vim \
+    nginx \
+    gettext-base \
+    file \
+    # weasyprint dependencies
+    libpango-1.0-0 \
+    libharfbuzz0b \
+    libpangoft2-1.0-0 \
+    libpangocairo-1.0-0 \
+    # For backups
+    restic \
+    gpg \
+    # MariaDB
+    mariadb-client \
+    less \
+    # Postgres
+    libpq-dev \
+    postgresql-client \
+    # For healthcheck
+    wait-for-it \
+    jq \
+    # NodeJS
     && mkdir -p ${NVM_DIR} \
-    && curl -o- https://raw.githubusercontent.com | bash \
+    && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash \
     && . ${NVM_DIR}/nvm.sh \
     && nvm install ${NODE_VERSION} \
     && nvm use v${NODE_VERSION} \
     && npm install -g yarn \
     && nvm alias default v${NODE_VERSION} \
     && rm -rf ${NVM_DIR}/.cache \
-    # Install wkhtmltopdf
+    && echo 'export NVM_DIR="/home/cogniquaint/.nvm"' >>/home/cogniquaint/.bashrc \
+    && echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >>/home/cogniquaint/.bashrc \
+    && echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >>/home/cogniquaint/.bashrc \
+    # Install wkhtmltopdf with patched qt
     && if [ "$(uname -m)" = "aarch64" ]; then export ARCH=arm64; fi \
     && if [ "$(uname -m)" = "x86_64" ]; then export ARCH=amd64; fi \
     && downloaded_file=wkhtmltox_${WKHTMLTOPDF_VERSION}.${WKHTMLTOPDF_DISTRO}_${ARCH}.deb \
-    && curl -sLO https://github.com \
+    && curl -sLO https://github.com/wkhtmltopdf/packaging/releases/download/$WKHTMLTOPDF_VERSION/$downloaded_file \
     && apt-get install -y ./$downloaded_file \
     && rm $downloaded_file \
+    # Clean up
     && rm -rf /var/lib/apt/lists/* \
     && rm -fr /etc/nginx/sites-enabled/default \
     && pip3 install frappe-bench \
-    # Nginx Permissions
+    # Fixes for non-root nginx and logs to stdout
     && sed -i '/user www-data/d' /etc/nginx/nginx.conf \
     && ln -sf /dev/stdout /var/log/nginx/access.log && ln -sf /dev/stderr /var/log/nginx/error.log \
     && touch /run/nginx.pid \
-    && chown -R cogniquaint:cogniquaint /etc/nginx/conf.d /etc/nginx/nginx.conf /var/log/nginx /var/lib/nginx /run/nginx.pid \
+    && chown -R cogniquaint:cogniquaint /etc/nginx/conf.d \
+    && chown -R cogniquaint:cogniquaint /etc/nginx/nginx.conf \
+    && chown -R cogniquaint:cogniquaint /var/log/nginx \
+    && chown -R cogniquaint:cogniquaint /var/lib/nginx \
+    && chown -R cogniquaint:cogniquaint /run/nginx.pid \
     && chmod 755 /usr/local/bin/nginx-entrypoint.sh \
     && chmod 644 /templates/nginx/frappe.conf.template
 
 # --- STAGE 1: BUILDER ---
 FROM base AS builder
 
-USER root
-RUN apt-get update && apt-get install --no-install-recommends -y \
-    wget libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev \
-    libpq-dev libffi-dev liblcms2-dev libldap2-dev libmariadb-dev libsasl2-dev \
-    libtiff5-dev libwebp-dev pkg-config redis-tools rlwrap tk8.6-dev cron \
-    gcc build-essential libbz2-dev \
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+    # For frappe framework
+    wget \
+    #for building arm64 binaries
+    libcairo2-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libgif-dev \
+    librsvg2-dev \
+    # For psycopg2
+    libpq-dev \
+    # Other
+    libffi-dev \
+    liblcms2-dev \
+    libldap2-dev \
+    libmariadb-dev \
+    libsasl2-dev \
+    libtiff5-dev \
+    libwebp-dev \
+    pkg-config \
+    redis-tools \
+    rlwrap \
+    tk8.6-dev \
+    cron \
+    # For pandas
+    gcc \
+    build-essential \
+    libbz2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Handle apps.json
