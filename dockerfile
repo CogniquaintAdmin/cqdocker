@@ -1,43 +1,54 @@
 ARG PYTHON_VERSION=3.11.6
 ARG DEBIAN_BASE=bookworm
-FROM python:${PYTHON_VERSION}-slim-${DEBIAN_BASE} AS base
 
-ARG WKHTMLTOPDF_VERSION=0.12.6.1-3
-ARG WKHTMLTOPDF_DISTRO=bookworm
-FROM base AS builder
+# Stage 1: Builder
+FROM python:${PYTHON_VERSION}-slim-${DEBIAN_BASE} AS builder
 
 RUN apt-get update && apt-get install -y git curl jq
 
-# apps.json includes
+# Handle apps.json
 ARG APPS_JSON_BASE64
 RUN if [ -n "${APPS_JSON_BASE64}" ]; then \
-    mkdir -p /opt/frappe && echo "${APPS_JSON_BASE64}" | base64 -d > /opt/frappe/apps.json && \
-    chown -R root:root /opt/frappe; \
+    mkdir -p /opt/frappe && echo "${APPS_JSON_BASE64}" | base64 -d > /opt/frappe/apps.json; \
   fi
 
-RUN useradd -ms /bin/bash cogniquaint && chown -R cogniquaint:cogniquaint /opt/frappe 2>/dev/null || true
+# Create user with explicit UID to match secret mounting
+RUN useradd -ms /bin/bash -u 1000 cogniquaint
+RUN chown -R cogniquaint:cogniquaint /opt/frappe
 
 USER cogniquaint
+WORKDIR /opt/frappe
 
-RUN --mount=type=secret,id=GH_PAT \
+# Mount secret with UID/GID 1000 so cogniquaint can read it
+RUN --mount=type=secret,id=GH_PAT,uid=1000,gid=1000 \
     mkdir -p /opt/frappe/apps && \
     if [ -f /opt/frappe/apps.json ]; then \
-      SECRET_TOKEN=$(cat /run/secrets/GH_PAT 2>/dev/null || true) && \
-      if [ -n "$SECRET_TOKEN" ]; then \
-        echo "Secret file found, token loaded: ${SECRET_TOKEN:0:10}..." && \
-        git config --global url."https://${SECRET_TOKEN}:x-oauth-basic@github.com/".insteadOf "https://github.com/" && \
-        echo "Git config updated successfully"; \
+      if [ -f /run/secrets/GH_PAT ]; then \
+        SECRET_TOKEN=$(cat /run/secrets/GH_PAT) && \
+        git config --global url."https://${SECRET_TOKEN}:x-oauth-basic@://github.com".insteadOf "https://://github.com" && \
+        echo "Git configuration set with token."; \
       else \
-        echo "Warning: Secret file GH_PAT2 not found or empty"; \
+        echo "Error: Secret GH_PAT not found at /run/secrets/GH_PAT"; exit 1; \
       fi && \
       jq -c ".[]" /opt/frappe/apps.json | while read -r line; do \
         url=$(echo "$line" | jq -r ".url") && \
         branch=$(echo "$line" | jq -r ".branch") && \
         repo_name=$(basename "$url" .git) && \
-        echo "Cloning $repo_name from $url (branch: $branch)" && \
-        git clone --branch "$branch" "$url" "/opt/frappe/apps/$repo_name" || echo "Failed to clone $url"; \
+        echo "Cloning $repo_name..." && \
+        git clone --depth 1 --branch "$branch" "$url" "/opt/frappe/apps/$repo_name"; \
       done; \
+      # Cleanup git config to ensure no tokens remain in this layer
+      git config --global --unset url."https://${SECRET_TOKEN}:x-oauth-basic@://github.com".insteadOf; \
     else \
-      echo "apps.json not found at /opt/frappe/apps.json"; \
+      echo "apps.json not found, skipping clone."; \
     fi
 
+# Stage 2: Final Image
+FROM python:${PYTHON_VERSION}-slim-${DEBIAN_BASE} AS final
+
+RUN useradd -ms /bin/bash -u 1000 cogniquaint
+USER cogniquaint
+WORKDIR /opt/frappe
+
+# Copy only the cloned apps from the builder stage
+COPY --from=builder --chown=cogniquaint:cogniquaint /opt/frappe/apps /opt/frappe/apps

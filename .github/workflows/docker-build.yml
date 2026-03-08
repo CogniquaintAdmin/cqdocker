@@ -2,8 +2,12 @@ name: Build and Push ERP Image V16
 
 on:
   push:
+    # Trigger on version tags
     tags:
       - 'v*'
+    # Trigger on direct pushes to the development branch
+    branches:
+      - version-16
 
 jobs:
   build:
@@ -12,7 +16,7 @@ jobs:
     env:
       GIT_REPO_PATH: https://github.com/frappe/frappe
       GIT_BRANCH: version-16
-      PYTHON_VERSION: "3.14.3"
+      PYTHON_VERSION: "3.11.6"
       NODE_VERSION: "24.14.0"
 
     steps:
@@ -21,7 +25,13 @@ jobs:
 
       - name: Extract version
         id: vars
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: |
+          # If triggered by a tag, use the tag name. If triggered by a branch, use 'latest'
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=latest" >> $GITHUB_OUTPUT
+          fi
 
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -48,7 +58,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./dockerfile   # change if custom path
+          file: ./dockerfile
           push: true
           build-args: |
             GIT_REPO_PATH=${{ env.GIT_REPO_PATH }}
@@ -56,7 +66,9 @@ jobs:
             PYTHON_VERSION=${{ env.PYTHON_VERSION }}
             NODE_VERSION=${{ env.NODE_VERSION }}
             APPS_JSON_BASE64=${{ env.APPS_JSON_BASE64 }}
-            GH_PAT=${{ secrets.GH_PAT2 }}
+          # Securely pass the PAT for the Dockerfile --mount=type=secret
+          secrets: |
+            "GH_PAT=${{ secrets.GH_PAT2 }}"
           tags: |
             cogniquaint/test16:${{ steps.vars.outputs.VERSION }}
             cogniquaint/test16:latest
